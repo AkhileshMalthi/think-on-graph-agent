@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "think-on-graph"
+version = "0.1.0"
+description = "Implementation of Think of Graph Research Paper"
+authors = ["AkhileshMalthi <akhileshmalthi2299@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+spacy = "^3.8.2"
+neo4j = "^5.27.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
