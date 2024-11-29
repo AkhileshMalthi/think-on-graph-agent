@@ -10,6 +10,10 @@ readme = "README.md"
 python = "^3.10"
 spacy = "^3.8.2"
 neo4j = "^5.27.0"
+networkx = "^3.4.2"
+pyvis = "^0.3.2"
+openai = "^1.55.3"
+python-dotenv = "^1.0.1"
 
 
 [build-system]
