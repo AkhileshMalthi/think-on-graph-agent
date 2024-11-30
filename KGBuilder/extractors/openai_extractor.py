@@ -1,29 +1,30 @@
 import json
 import re
+from typing import Dict, List, Any, Callable, Union
 from openai import OpenAI
 import os
 import traceback
 from dotenv import load_dotenv
 from prompts import PROMPTS
+
 # Load environment variables
 load_dotenv()
 
 # Detailed system and extraction prompts
-system_prompt = PROMPTS['system_prompt']
-
-extraction_prompt = PROMPTS['entity_extraction']
+system_prompt: str = PROMPTS['system_prompt']
+extraction_prompt: str = PROMPTS['entity_extraction']
 
 class OpenAIExtractor:
-    def __init__(self, model="gpt-4o-mini"):
+    def __init__(self, model: str = "gpt-4o-mini") -> None:
         """
         Initialize the advanced OpenAI extractor with robust configuration.
         
         :param model: OpenAI model for extraction
         """
-        self.model = model
-        self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        self.model: str = model
+        self.client: OpenAI = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-    def extract(self, text):
+    def extract(self, text: str) -> Dict[str, List[Any]]:
         """
         Comprehensively extract entities and relationships from text.
         
@@ -32,11 +33,7 @@ class OpenAIExtractor:
         """
         try:
             # Prepare detailed extraction prompt
-            formatted_prompt = extraction_prompt.format(input_text=text)
-            
-            # print("DEBUG: Sending request to OpenAI")
-            # print("DEBUG: Input Text:", text)
-            # print("DEBUG: Formatted Prompt:", formatted_prompt)
+            formatted_prompt: str = extraction_prompt.format(input_text=text)
             
             # Make API request with strict JSON formatting
             response = self.client.chat.completions.create(
@@ -50,13 +47,10 @@ class OpenAIExtractor:
             )
             
             # Extract response content
-            result_text = response.choices[0].message.content
-            
-            # print("DEBUG: Raw OpenAI Response:")
-            # print(result_text)
+            result_text: str = response.choices[0].message.content
             
             # Comprehensive parsing with multiple fallback strategies
-            graph_data = self._robust_json_parse(result_text)
+            graph_data: Dict[str, List[Any]] = self._robust_json_parse(result_text)
             
             return graph_data
         
@@ -65,14 +59,14 @@ class OpenAIExtractor:
             print(traceback.format_exc())
             return {"entities": [], "relationships": []}
 
-    def _robust_json_parse(self, response_text):
+    def _robust_json_parse(self, response_text: str) -> Dict[str, List[Any]]:
         """
         Implement multiple parsing strategies for JSON extraction.
         
         :param response_text: Raw text response from OpenAI
         :return: Parsed graph data
         """
-        parsing_strategies = [
+        parsing_strategies: List[Callable[[str], Dict[str, List[Any]]]] = [
             self._standard_json_parse,
             self._regex_json_parse,
             self._fallback_json_parse
@@ -80,7 +74,7 @@ class OpenAIExtractor:
         
         for strategy in parsing_strategies:
             try:
-                result = strategy(response_text)
+                result: Dict[str, List[Any]] = strategy(response_text)
                 if result:
                     return result
             except Exception as e:
@@ -90,10 +84,10 @@ class OpenAIExtractor:
         print("ALL JSON PARSING STRATEGIES FAILED")
         return {"entities": [], "relationships": []}
 
-    def _standard_json_parse(self, text):
+    def _standard_json_parse(self, text: str) -> Dict[str, List[Any]]:
         """Standard JSON parsing method."""
-        clean_text = text.strip().replace('```json', '').replace('```', '')
-        parsed_data = json.loads(clean_text)
+        clean_text: str = text.strip().replace('```json', '').replace('```', '')
+        parsed_data: Dict[str, Any] = json.loads(clean_text)
         
         # Validate structure
         if not isinstance(parsed_data, dict):
@@ -104,16 +98,16 @@ class OpenAIExtractor:
         
         return parsed_data
 
-    def _regex_json_parse(self, text):
+    def _regex_json_parse(self, text: str) -> Dict[str, List[Any]]:
         """Regex-based JSON extraction method."""
         # Extract JSON-like content between first '{' and last '}'
-        match = re.search(r'\{.*\}', text, re.DOTALL)
+        match: Union[re.Match, None] = re.search(r'\{.*\}', text, re.DOTALL)
         if match:
-            clean_text = match.group(0)
+            clean_text: str = match.group(0)
             return self._standard_json_parse(clean_text)
         raise ValueError("No JSON-like structure found")
 
-    def _fallback_json_parse(self, text):
+    def _fallback_json_parse(self, text: str) -> Dict[str, List[Any]]:
         """Extremely lenient parsing as last resort."""
         # Attempt to manually reconstruct JSON
         text = text.strip()
@@ -121,16 +115,16 @@ class OpenAIExtractor:
             return {"entities": [], "relationships": []}
         raise ValueError("Cannot parse JSON")
 
-def main():
+def main() -> None:
     # Demonstration with multiple test cases
-    test_prompts = PROMPTS['extraction_test_prompts']
+    test_prompts: List[str] = PROMPTS['extraction_test_prompts']
     
-    extractor = OpenAIExtractor()
+    extractor: OpenAIExtractor = OpenAIExtractor()
     
     for text in test_prompts:
         print("\n--- Processing Text: ---\n")
         print(text)
-        graph_data = extractor.extract(text)
+        graph_data: Dict[str, List[Any]] = extractor.extract(text)
         print("Extracted Graph Data:")
         print(json.dumps(graph_data, indent=2))
 
