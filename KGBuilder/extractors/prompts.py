@@ -1,15 +1,28 @@
 GRAPH_FIELD_SEP = "<SEP>"
 
+# Dictionary to hold all the prompts required for the KG
 PROMPTS = {}
 
+# System prompt for extracting entities and relationships among them
+PROMPTS['SYSTEM_PROMPT'] = """
+You are an AI model that extracts entities, relationships, and key concepts from a given document. For the provided text:
+
+Extract Entities: Identify and categorize all relevant entities, providing their names, types, and descriptions.
+Identify Relationships: Identify pairs of related entities and describe the relationship between them.
+Extract Keywords: Identify the main themes or concepts of the document.
+Return the information clearly in a structured format."""
+
+# Parameters required for multiple usecases 
 PROMPTS["DEFAULT_LANGUAGE"] = "English"
-PROMPTS["DEFAULT_TUPLE_DELIMITER"] = "<|>"
+PROMPTS["DEFAULT_TUPLE_DELIMITER"] = "|"
 PROMPTS["DEFAULT_RECORD_DELIMITER"] = "##"
 PROMPTS["DEFAULT_COMPLETION_DELIMITER"] = "<|COMPLETE|>"
 PROMPTS["process_tickers"] = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
 
+# Define types of entities for extraction
 PROMPTS["DEFAULT_ENTITY_TYPES"] = ["organization", "person", "geo", "event"]
 
+# Extraction prompt to extract entities 
 PROMPTS["entity_extraction"] = """-Goal-
 Given a text document that is potentially relevant to this activity and a list of entity types, identify all entities of those types from the text and all relationships among the identified entities.
 Use {language} as output language.
@@ -37,11 +50,6 @@ Format the content-level key words as ("content_keywords"{tuple_delimiter}<high_
 
 5. When finished, output {completion_delimiter}
 
-######################
--Examples-
-######################
-{examples}
-
 #############################
 -Real Data-
 ######################
@@ -50,7 +58,7 @@ Text: {input_text}
 ######################
 Output:
 """
-
+# Examples for few shot 
 PROMPTS["entity_extraction_examples"] = [
     """Example 1:
 
@@ -124,6 +132,7 @@ Output:
 #############################""",
 ]
 
+# Prompt for summarizing entity descriptions
 PROMPTS[
     "summarize_entity_descriptions"
 ] = """You are a helpful assistant responsible for generating a comprehensive summary of the data provided below.
