@@ -5,7 +5,7 @@ from openai import OpenAI
 import os
 import traceback
 from dotenv import load_dotenv
-from prompts import PROMPTS
+from .prompts import PROMPTS
 
 # Load environment variables
 load_dotenv()
@@ -128,5 +128,5 @@ def main() -> None:
         print("Extracted Graph Data:")
         print(json.dumps(graph_data, indent=2))
 
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__": 
+#     main()
