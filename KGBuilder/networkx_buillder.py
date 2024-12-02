@@ -8,49 +8,35 @@ class NxKG:
         """
         self.graph = nx.MultiDiGraph()
 
-    def add_entity(self, name, entity_type, description=None):
+    def add_entity(self, name, **properties):
         """
-        Add an entity to the knowledge graph.
+        Add an entity to the knowledge graph with arbitrary properties.
         
         Args:
             name (str): Unique identifier for the entity
-            entity_type (str): Type of the entity (e.g., Person, Organization, Location)
-            description (str, optional): Description of the entity
+            **properties: Arbitrary keyword arguments for entity properties
         """
-        # Check if entity already exists
-        if name not in self.graph:
-            self.graph.add_node(
-                name, 
-                type=entity_type, 
-                description=description
-            )
-        return self
+        # if name not in self.graph:
+        #     self.graph.add_node(name, **properties)
+        # return self
+        self.graph.add_node(name, **properties)
 
-    def add_relationship(self, source, target, relationship_types=None, description=None, strength=None):
+
+    def add_relationship(self, source, target, **properties):
         """
-        Add a relationship between two entities in the knowledge graph.
+        Add a relationship between two entities with arbitrary properties.
         
         Args:
             source (str): Name of the source entity
             target (str): Name of the target entity
-            relationship_types (list, optional): Types of relationships
-            description (str, optional): Description of the relationship
-            strength (str, optional): Strength of the relationship
+            **properties: Arbitrary keyword arguments for relationship properties
         """
-        # Ensure both entities exist
-        if source not in self.graph:
-            raise ValueError(f"Source entity '{source}' does not exist.")
-        if target not in self.graph:
-            raise ValueError(f"Target entity '{target}' does not exist.")
+        # if source not in self.graph:
+        #     raise ValueError(f"Source entity '{source}' does not exist.")
+        # if target not in self.graph:
+        #     raise ValueError(f"Target entity '{target}' does not exist.")
         
-        # Add edge with relationship details
-        self.graph.add_edge(
-            source, 
-            target, 
-            relationship_types=relationship_types or [],
-            description=description,
-            strength=strength
-        )
+        self.graph.add_edge(source, target, **properties)
         return self
 
     def load_from_json(self, json_data):
@@ -60,97 +46,79 @@ class NxKG:
         Args:
             json_data (dict): JSON dictionary containing entities and relationships
         """
-        # Add entities
+        # Add entities with all their properties
         for entity in json_data.get('entities', []):
-            self.add_entity(
-                name=entity['name'], 
-                entity_type=entity['type'], 
-                description=entity.get('description')
-            )
+            # Extract name and use remaining properties as is
+            name = entity.pop('name')
+            self.add_entity(name, **entity)
         
-        # Add relationships
+        # Add relationships with all their properties
         for relationship in json_data.get('relationships', []):
-            self.add_relationship(
-                source=relationship['source'],
-                target=relationship['target'],
-                relationship_types=relationship.get('relationship_types', []),
-                description=relationship.get('description'),
-                strength=relationship.get('strength')
-            )
+            # Extract source and target, use remaining properties as is
+            source = relationship.pop('source')
+            target = relationship.pop('target')
+            self.add_relationship(source, target, **relationship)
         return self
 
-    def visualize(self, output_file='knowledge_graph.html', node_color_map=None):
+    def visualize(self, output_file='knowledge_graph.html', node_color_property='type', node_color_map=None):
         """
         Visualize the knowledge graph using PyVis.
         
         Args:
-            output_file (str, optional): Path to save the HTML visualization
-            node_color_map (dict, optional): Mapping of entity types to colors
+            output_file (str): Path to save the HTML visualization
+            node_color_property (str): Node property to use for coloring
+            node_color_map (dict): Mapping of property values to colors
         """
-        # Default color map if not provided
         if node_color_map is None:
             node_color_map = {
-                'Person': '#87CEFA',  # Light Sky Blue
-                'Organization': '#90EE90',  # Light Green
-                'Location': '#FFA07A'  # Light Salmon
+                'Person': '#87CEFA',
+                'Organization': '#90EE90',
+                'Location': '#FFA07A'
             }
         
-        # Create PyVis network
-        net = Network(
-            height='600px', 
-            width='100%', 
-            bgcolor='#ffffff', 
-            font_color='black',
-            notebook=False
-        )
+        net = Network(height='600px', width='100%', bgcolor='#ffffff', 
+                     font_color='black', notebook=False)
         
-        # Add nodes with colors based on entity type
+        # Add nodes
         for node, data in self.graph.nodes(data=True):
-            color = node_color_map.get(data['type'], '#D3D3D3')  # Default to light gray
-            net.add_node(
-                node, 
-                label=node, 
-                title=data.get('description', ''),
-                color=color
+            # Get color based on the specified property if it exists
+            color = node_color_map.get(
+                data.get(node_color_property, ''),
+                '#D3D3D3'  # Default color
             )
+            
+            # Use all properties as tooltip content
+            tooltip = '\n'.join(f"{k}: {v}" for k, v in data.items())
+            
+            net.add_node(node, label=node, title=tooltip, color=color)
         
-        # Add edges with relationship types as labels
+        # Add edges
         for source, target, data in self.graph.edges(data=True):
-            # Combine relationship types into a single label
-            edge_label = ', '.join(data.get('relationship_types', []))
+            # Use all properties as tooltip content
+            tooltip = '\n'.join(f"{k}: {v}" for k, v in data.items())
             
-            # Determine edge color based on strength
+            # Use relationship_types as label if it exists, otherwise empty
+            label = ', '.join(data.get('relationship_types', [])) if 'relationship_types' in data else ''
+            
+            # Use strength for color if it exists
             strength_color_map = {
-                'strong': '#000000',  # Black
-                'medium': '#808080',  # Gray
-                'weak': '#C0C0C0'     # Light Gray
+                'strong': '#000000',
+                'medium': '#808080',
+                'weak': '#C0C0C0'
             }
-            edge_color = strength_color_map.get(data.get('strength'), '#808080')
+            edge_color = strength_color_map.get(data.get('strength', ''), '#808080')
             
-            net.add_edge(
-                source, 
-                target, 
-                label=edge_label,
-                title=data.get('description', ''),
-                color=edge_color
-            )
+            net.add_edge(source, target, label=label, title=tooltip, color=edge_color)
         
         # Configure physics and interaction
         net.set_options('''
         var options = {
             "nodes": {
-                "font": {
-                    "size": 12
-                },
-                "scaling": {
-                    "min": 10,
-                    "max": 30
-                }
+                "font": {"size": 12},
+                "scaling": {"min": 10, "max": 30}
             },
             "edges": {
-                "color": {
-                    "inherit": false
-                },
+                "color": {"inherit": false},
                 "smooth": false
             },
             "physics": {
@@ -164,24 +132,24 @@ class NxKG:
         }
         ''')
         
-        # Save or show the network
         net.save_graph(output_file)
         print(f"Check out the visualization in {output_file}")
         return self
 
-    def get_entities_by_type(self, entity_type):
+    def get_entities_by_property(self, property_name, property_value):
         """
-        Retrieve all entities of a specific type.
+        Retrieve all entities that have a specific property value.
         
         Args:
-            entity_type (str): Type of entities to retrieve
+            property_name (str): Name of the property to filter by
+            property_value: Value of the property to match
         
         Returns:
-            list: Entities of the specified type
+            list: Entities matching the property criteria
         """
         return [
-            node for node, data in self.graph.nodes(data=True) 
-            if data['type'] == entity_type
+            node for node, data in self.graph.nodes(data=True)
+            if data.get(property_name) == property_value
         ]
 
     def get_relationships_for_entity(self, entity_name):
@@ -207,28 +175,19 @@ class NxKG:
             dict: JSON representation of the knowledge graph
         """
         entities = [
-            {
-                'name': node,
-                'type': data['type'],
-                'description': data.get('description')
-            } for node, data in self.graph.nodes(data=True)
+            {'name': node, **data}
+            for node, data in self.graph.nodes(data=True)
         ]
         
         relationships = [
-            {
-                'source': u,
-                'target': v,
-                'relationship_types': data.get('relationship_types', []),
-                'description': data.get('description'),
-                'strength': data.get('strength')
-            } for (u, v, data) in self.graph.edges(data=True)
+            {'source': u, 'target': v, **data}
+            for (u, v, data) in self.graph.edges(data=True)
         ]
         
         return {
             'entities': entities,
             'relationships': relationships
         }
-
 # Example usage
 # if __name__ == "__main__":
 #     # Sample JSON data
