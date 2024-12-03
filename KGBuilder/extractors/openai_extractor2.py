@@ -66,12 +66,6 @@ class KnowledgeGraphExtractor:
         return hashlib.md5(f"{name}_{entity_type}".encode()).hexdigest()
 
     def R(self, text: str) -> Dict[str, List[Dict]]:
-        """
-        Advanced Entity and Relationship Extraction
-        
-        :param text: Input text to analyze
-        :return: Extracted graph data with fixed schema
-        """
         try:
             response = self.client.chat.completions.create(
                 model=self.model,
@@ -79,12 +73,7 @@ class KnowledgeGraphExtractor:
                 messages=[
                     {
                         "role": "system", 
-                        "content": """
-                        Extract entities and relationships using a strict schema:
-                        - Precise entity typing
-                        - Clear relationship classifications
-                        - Contextual descriptions
-                        """
+                        "content": "Extract entities and relationships using the predefined schema, with intelligent attribute generation."
                     },
                     {
                         "role": "user", 
@@ -96,33 +85,44 @@ class KnowledgeGraphExtractor:
                         Output JSON with:
                         - Unique, descriptive entities
                         - Clear inter-entity relationships
-                        - Relationship strengths
+                        - Rich, context-driven attributes for both entities and relationships
                         
-                        JSON Structure:
+                        JSON Structure (UNCHANGED):
                         {{
                             "entities": [{{
                                 "name": "Exact Name",
                                 "type": "ENTITY_TYPE",
                                 "aliases": ["Alternative Names"],
                                 "description": "Contextual Description",
-                                "attributes": {{}}
+                                "attributes": "Dynamically derived, meaningful metadata"
                             }}],
                             "relationships": [{{
                                 "source_name": "Source Entity",
                                 "target_name": "Target Entity",
                                 "types": ["Relationship Types"],
                                 "strength": 0-1,
-                                "description": "Relationship Context"
+                                "description": "Relationship Context",
+                                "attributes": "Contextually relevant relationship details"
                             }}]
                         }}
+
+                        Attribute Generation Guidelines:
+                        1. Derive attributes directly from text context
+                        2. Provide unique, information-rich metadata
+                        3. Use domain-specific insights
+                        4. Ensure attributes enhance understanding
                         """
                     }
                 ],
-                temperature=0.3,
+                temperature=0.4,
                 max_tokens=1024
             )
             
             return json.loads(response.choices[0].message.content)
+        
+        except Exception as e:
+            logger.error(f"Extraction Error: {e}")
+            return {"entities": [], "relationships": []}
         
         except Exception as e:
             logger.error(f"Extraction Error: {e}")
@@ -319,11 +319,7 @@ def main():
     extractor = KnowledgeGraphExtractor()
     
     texts = [
-        '''Identify the impact of increasing renewable energy investments in Southeast Asia,
-        focusing on how solar panel manufacturers like SolarTech collaborate with governments 
-        in Thailand and Indonesia to achieve net-zero emissions targets by 2050, 
-        considering financial incentives, trade policies, and the role of international organizations 
-        like the UNDP in facilitating these initiatives'''
+        '''Identify the impact of increasing renewable energy investments in Southeast Asia'''
     ]
     
     kg = extractor.extract_knowledge_graph(texts)
