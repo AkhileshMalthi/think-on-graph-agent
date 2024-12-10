@@ -4,7 +4,9 @@ GRAPH_FIELD_SEP = "<SEP>"
 PROMPTS = {}
 
 # System prompt for extracting entities and relationships among them
-PROMPTS['system_prompt'] = """
+PROMPTS[
+    "system_prompt"
+] = """
 You are an expert entity and relationship extraction assistant. 
 Extract structured information from text with precision:
 - Identify clear, distinct entities
@@ -33,8 +35,10 @@ Extract structured information from text with precision:
 # Define types of entities for extraction
 PROMPTS["entitiy_types"] = ["organization", "person", "geo", "event"]
 
-# Extraction prompt to extract entities 
-PROMPTS["entity_extraction"] = """
+# Extraction prompt to extract entities
+PROMPTS[
+    "entity_extraction"
+] = """
 Task: Extract detailed entities and relationships from the text.
 
 Text: {input_text}
@@ -47,8 +51,8 @@ Instructions:
 5. If no clear entities/relationships exist, return empty lists
 """
 
-PROMPTS['extraction_test_prompts'] = [
-        "Barack Obama was the 44th President of the United States and Michelle Obama is an author.",
-        "The company Google was founded by Larry Page and Sergey Brin in California.",
-        "Some texts might not have clear entities."
-    ]
+PROMPTS["extraction_test_prompts"] = [
+    "Barack Obama was the 44th President of the United States and Michelle Obama is an author.",
+    "The company Google was founded by Larry Page and Sergey Brin in California.",
+    "Some texts might not have clear entities.",
+]
