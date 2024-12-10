@@ -1,11 +1,8 @@
 import json
-import re
 import logging
 import os
-from typing import Dict, List, Any, Optional
-from collections import defaultdict
+from typing import Dict, List, Optional
 from fuzzywuzzy import fuzz
-import networkx as nx
 import openai
 from dotenv import load_dotenv
 
@@ -13,7 +10,7 @@ from dotenv import load_dotenv
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-class KnowledgeGraphExtractor:
+class OpenAIKnowledgeGraphExtractor:
     # Predefined Fixed Schema
     ENTITY_SCHEMA = {
         "id": str,             # Unique identifier
@@ -316,7 +313,7 @@ class KnowledgeGraphExtractor:
         return comprehensive_graph
 
 def main():
-    extractor = KnowledgeGraphExtractor()
+    extractor = OpenAIKnowledgeGraphExtractor()
     
     texts = [
         '''Identify the impact of increasing renewable energy investments in Southeast Asia'''
