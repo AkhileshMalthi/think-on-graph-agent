@@ -14,7 +14,13 @@ networkx = "^3.4.2"
 pyvis = "^0.3.2"
 openai = "^1.55.3"
 python-dotenv = "^1.0.1"
+fuzzywuzzy = "^0.18.0"
 
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.4"
+black = "^24.10.0"
+flake8 = "^7.1.1"
 
 [build-system]
 requires = ["poetry-core"]
