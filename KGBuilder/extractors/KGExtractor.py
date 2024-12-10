@@ -1,11 +1,8 @@
 import json
-import re
 import logging
 import os
-from typing import Dict, List, Any, Optional
-from collections import defaultdict
+from typing import Dict, List, Optional
 from fuzzywuzzy import fuzz
-import networkx as nx
 # With these
 from openai import AzureOpenAI
 from dotenv import load_dotenv
@@ -34,11 +31,11 @@ class KnowledgeGraphExtractor:
         "description": str,    # Relationship context
     }
 
-    def __init__(self, model="gpt-35-turbo", similarity_threshold=0.8):
+    def __init__(self, model="gpt-4o", similarity_threshold=0.8):
         """
         Initialize Knowledge Graph Extractor with fixed schema support.
         
-        :param model: Azure OpenAI model to use
+        :param model: Azure OpenAI model to use; Default = "gpt-40
         :param similarity_threshold: Threshold for entity/relationship matching
         """
         load_dotenv()
