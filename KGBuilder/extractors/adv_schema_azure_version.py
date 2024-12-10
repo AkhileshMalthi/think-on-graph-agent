@@ -32,7 +32,6 @@ class KnowledgeGraphExtractor:
         "types": List[str],    # Relationship types (e.g., COLLABORATES_WITH, LOCATED_IN)
         "strength": float,     # Relationship strength (0-1)
         "description": str,    # Relationship context
-        "attributes": Dict     # Additional relationship metadata
     }
 
     def __init__(self, model="gpt-35-turbo", similarity_threshold=0.8):
@@ -106,8 +105,7 @@ class KnowledgeGraphExtractor:
                                 "target_name": "Target Entity",
                                 "types": ["Relationship Types"],
                                 "strength": 0-1,
-                                "description": "Relationship Context",
-                                "attributes": "Contextually relevant relationship details"
+                                "description": "Relationship Context"
                             }}]
                         }}
 
@@ -124,10 +122,6 @@ class KnowledgeGraphExtractor:
             )
             
             return json.loads(response.choices[0].message.content)
-        
-        except Exception as e:
-            logger.error(f"Extraction Error: {e}")
-            return {"entities": [], "relationships": []}
         
         except Exception as e:
             logger.error(f"Extraction Error: {e}")
@@ -183,8 +177,7 @@ class KnowledgeGraphExtractor:
                     "target_id": target_entity["id"],
                     "types": rel.get("types", []),
                     "strength": float(rel.get("strength", 0.5)),
-                    "description": rel.get("description", ""),
-                    "attributes": {}
+                    "description": rel.get("description", "")
                 }
                 processed["relationships"].append(processed_rel)
         
@@ -292,8 +285,7 @@ class KnowledgeGraphExtractor:
             "target_id": rel1["target_id"],
             "types": list(set(rel1.get("types", []) + rel2.get("types", []))),
             "strength": max(rel1.get("strength", 0), rel2.get("strength", 0)),
-            "description": f"{rel1.get('description', '')} | {rel2.get('description', '')}".strip(" |"),
-            "attributes": {**rel1.get("attributes", {}), **rel2.get("attributes", {})}
+            "description": f"{rel1.get('description', '')} | {rel2.get('description', '')}".strip(" |")
         }
 
     def extract_knowledge_graph(self, texts: List[str]) -> Dict:
