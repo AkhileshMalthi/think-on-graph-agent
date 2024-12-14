@@ -7,8 +7,7 @@ from collections import defaultdict
 from fuzzywuzzy import fuzz
 import networkx as nx
 import spacy
-# With these
-from openai import AzureOpenAI
+from groq import Groq
 from dotenv import load_dotenv
 import hashlib
 
@@ -36,20 +35,18 @@ class KnowledgeGraphExtractor:
         "description": str,    # Relationship context
     }
 
-    def __init__(self, model="gpt-35-turbo", similarity_threshold=0.8):
+    def __init__(self, model="llama3-70b-8192", similarity_threshold=0.8):
         """
         Initialize Knowledge Graph Extractor with spaCy entity preprocessing
         
-        :param model: Azure OpenAI model to use
+        :param model: Groq model to use
         :param similarity_threshold: Threshold for entity/relationship matching
         """
         load_dotenv()
         
-        # Azure OpenAI Client Configuration
-        self.client = AzureOpenAI(
-            azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
-            api_key=os.getenv("AZURE_OPENAI_API_KEY"),
-            api_version="2024-02-01"
+        # Groq Client Configuration
+        self.client = Groq(
+            api_key=os.getenv("GROQ_API_KEY")
         )
         self.model = model
         
@@ -60,7 +57,7 @@ class KnowledgeGraphExtractor:
         self.entity_map: Dict[str, Dict] = {}
         self.relationship_map: Dict[str, Dict] = {}
         
-        # Load spaCy biomedical model
+        # Load spaCy model
         try:
             self.nlp = spacy.load("en_core_sci_scibert")
         except Exception as e:
@@ -69,7 +66,6 @@ class KnowledgeGraphExtractor:
             import subprocess
             subprocess.run(["python", "-m", "spacy", "download", "en_core_sci_sm"])
             self.nlp = spacy.load("en_core_sci_sm")
-
     def preprocess_entities(self, text: str) -> List[Dict]:
         """
         Extract entities using spaCy biomedical model
