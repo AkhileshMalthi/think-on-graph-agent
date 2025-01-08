@@ -417,9 +417,11 @@ def main():
         # subprocess.run(["python", "-m", "spacy", "download", "en_core_sci_sm"])
 
     extractor = KnowledgeGraphExtractor()
-    
-    texts = ["Sarah is a professor at University A. University A is a leading institution in New York. Sarah specializes in Artificial Intelligence and collaborates with researchers at University B."
-]
+    texts = [
+            '''Chronic Obstructive Pulmonary Disease (COPD) is a progressive lung disease that causes difficulty breathing due to airway blockage or inflammation. The condition includes two main types: emphysema and chronic bronchitis.''',
+            '''People with COPD often experience a chronic cough, wheezing, shortness of breath, and frequent respiratory infections. The primary risk factor for COPD is smoking.''',
+            '''Management of COPD includes smoking cessation, bronchodilators to open the airways, corticosteroids to reduce inflammation, and oxygen therapy in more advanced stages.'''
+        ]
     kg = extractor.extract_knowledge_graph(texts)
     print(json.dumps(kg, indent=2))
 
