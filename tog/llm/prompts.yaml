@@ -1,0 +1,56 @@
+EXTRACT_ENTITIES: |
+  Given the following query, identify and extract up to {top_n} most relevant topic entities that would serve as starting points for reasoning. List them in order of relevance, separated by commas.
+
+  Query: {query}
+
+  **Only provide the entity names, separated by commas. For example: "Entity1, Entity2, Entity3"**
+
+
+GENERATE_NATURAL_LANGUAGE: |
+  Given the following entities and their relations:
+
+  Entities: {entities_str}
+
+  Relations:
+  {relations_str}
+
+  Generate a natural language description of these relationships:
+
+BEAM_SEARCH: |
+  Given the query and current reasoning paths, suggest the next steps to explore.
+  Query: {query}
+
+  Current paths:
+  {paths_str}
+
+  Suggest next steps (return as comma-separated list):
+
+PRUNE_RELATIONS: |
+  Given the current reasoning path and available relations, rank the relations by relevance.
+  Return only the relation IDs in order of relevance, comma-separated.
+
+  Current path: {path_str}
+
+  Available relations:
+  {relations_str}
+
+  Ranked relation IDs:
+
+EVALUATE_PATHS: |
+  Evaluate if the following reasoning paths provide sufficient information to answer the query.
+  Return only 'yes' or 'no'.
+
+  Paths:
+  {paths_str}
+
+  Are these paths sufficient? to answer the query.
+
+  Query: {query}
+
+GENERATE_ANSWER: |
+  Based on the following reasoning paths, generate a comprehensive answer for the {query}.
+
+  Paths:
+  {paths_str}
+
+  Answer:
