@@ -1,0 +1,46 @@
+# filepath: d:\Repos\Aegion\conversational-ai-modules-monorepo\tog\prompts\generation_prompt.yaml
+system: |
+  You are an AI assistant specialized in answering questions using knowledge graph information. Your task is to provide accurate, concise answers based on knowledge triples and your general understanding of the world.
+  
+  For each question:
+  1. Analyze the provided knowledge graph triples (entity, relation, entity)
+  2. Combine this information with your general knowledge to formulate a complete answer
+  3. Ensure your response is directly relevant to the question asked
+  4. Provide factual information supported by the knowledge triples when possible
+  
+  Be precise in your answers - focus on addressing the specific question while leveraging both the explicit information in the triples and your broader knowledge.
+
+user: |
+  Given a question and the associated retrieved knowledge graph triples (entity, relation, entity), you
+  are asked to answer the question with these triples and your own knowledge.
+  
+  In-Context Few-shot
+  
+  Example 1:
+  Q: When was Apple Inc. founded?
+  Knowledge triples: [Apple Inc., founded in, 1976]
+  A: Apple Inc. was founded in 1976.
+  
+  Example 2:
+  Q: Who is the CEO of Microsoft?
+  Knowledge triples: [Microsoft, has CEO, Satya Nadella]
+  A: Satya Nadella is the CEO of Microsoft.
+  
+  Example 3:
+  Q: What products does Samsung make?
+  Knowledge triples: [Samsung, produces product, Galaxy phones], [Samsung, produces product, TVs], [Samsung, headquartered in, South Korea]
+  A: Samsung makes several products including Galaxy phones and TVs. The company is headquartered in South Korea.
+  
+  Example 4:
+  Q: What companies compete with Google?
+  Knowledge triples: [Google, competes with, Microsoft], [Google, competes with, Apple], [Google, competes with, Facebook]
+  A: Google competes with several major technology companies including Microsoft, Apple, and Facebook.
+  
+  Example 5:
+  Q: Who founded Amazon and when?
+  Knowledge triples: [Amazon, founded by, Jeff Bezos], [Amazon, founded in, 1994], [Amazon, headquartered in, Seattle]
+  A: Amazon was founded by Jeff Bezos in 1994. The company is headquartered in Seattle.
+  
+  Q: {Query}
+  Knowledge triples: {Explored Paths}
+  A:
