@@ -55,6 +55,32 @@ graph TD
 
 ---
 
+## 🏗️ **Architecture Overview**
+
+#### **🔄 The Three-Phase Intelligence Loop**
+
+1. **🎯 Initialization Phase**
+   - Extract topic entities from user queries
+   - Initialize reasoning paths with high-confidence starting points
+   - Establish beam search foundation
+
+    ![alt text](assets/image.png)
+
+2. **🔍 Exploration Phase** *(The Core Innovation)*
+   - **Relation Exploration**: LLM identifies most relevant relationships
+   - **Entity Discovery**: Follow promising paths to new entities
+   - **Intelligent Pruning**: Keep only top-N most promising paths
+   - **Iterative Refinement**: Each cycle deepens understanding
+
+    ![alt text](assets/image-1.png)
+3. **💡 Reasoning Phase**
+   - Evaluate knowledge sufficiency using LLM intelligence
+   - Generate comprehensive, traceable answers
+   - Provide reasoning path transparency
+   
+    ![alt text](assets/image-2.png)
+---
+
 ## 🌟 **Key Benefits**
 
 ### **🔍 Reliable & Traceable**
@@ -92,33 +118,6 @@ ToG achieves **state-of-the-art results** on complex reasoning tasks:
 
 *All improvements with zero training cost and full answer traceability.*
 
----
-
-## 🏗️ **Architecture Overview**
-
-#### **🔄 The Three-Phase Intelligence Loop**
-
-1. **🎯 Initialization Phase**
-   - Extract topic entities from user queries
-   - Initialize reasoning paths with high-confidence starting points
-   - Establish beam search foundation
-
-    ![alt text](assets/image.png)
-
-2. **🔍 Exploration Phase** *(The Core Innovation)*
-   - **Relation Exploration**: LLM identifies most relevant relationships
-   - **Entity Discovery**: Follow promising paths to new entities
-   - **Intelligent Pruning**: Keep only top-N most promising paths
-   - **Iterative Refinement**: Each cycle deepens understanding
-
-    ![alt text](assets/image-1.png)
-3. **💡 Reasoning Phase**
-   - Evaluate knowledge sufficiency using LLM intelligence
-   - Generate comprehensive, traceable answers
-   - Provide reasoning path transparency
-   
-    ![alt text](assets/image-2.png)
----
 
 ## 🚀 **Getting Started**
 
