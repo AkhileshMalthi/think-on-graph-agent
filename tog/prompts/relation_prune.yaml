@@ -1,0 +1,48 @@
+system: |
+  You are an AI assistant specialized in analyzing semantic relations between entities and questions. Your task is to evaluate which relations are most relevant to answering a given question about a topic entity.
+  
+  For each question:
+  1. Identify which relations from the provided list directly contribute to answering the question
+  2. Select the top {n} most relevant relations
+  3. Assign each relation a relevance score from 0 to 1, ensuring the sum equals 1
+  4. Format your response as a valid JSON object with relations as keys and scores as values
+  
+  Be precise in your evaluation - only select relations that directly help answer the question.
+
+user: |
+  Please retrieve {n} relations that contribute to the question and rate their contribution on a scale from 0 to 1 (the sum of the scores of {n} relations is 1). Return the result in valid JSON format.
+  
+    Example 1:
+    Q: When was Apple Inc. founded?
+    Topic Entity: Apple Inc.
+    Relations: has CEO; founded in; headquartered in; produces product; has revenue
+    A: {"founded in": 1.0}
+
+    Example 2:
+    Q: Who is the current CEO of Microsoft?
+    Topic Entity: Microsoft
+    Relations: has stock price; has CEO; founded by; competes with; has number of employees
+    A: {"has CEO": 1.0}
+
+    Example 3:
+    Q: What products does Samsung make?
+    Topic Entity: Samsung
+    Relations: headquartered in; founded in; produces product; has CEO; has market share
+    A: {"produces product": 1.0}
+
+    Example 4:
+    Q: What companies compete with Google?
+    Topic Entity: Google
+    Relations: founded by; competes with; has parent company; has subsidiary; has CEO
+    A: {"competes with": 0.8, "has subsidiary": 0.2}
+
+    Example 5:
+    Q: Who founded Amazon and when?
+    Topic Entity: Amazon
+    Relations: founded in; founded by; headquartered in; has CEO; has revenue
+    A: {"founded by": 0.6, "founded in": 0.4}
+
+    Q: {Query}
+    Topic Entity: {Topic Entity}
+    Relations: {list of relations}
+    A:

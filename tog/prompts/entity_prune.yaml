@@ -1,0 +1,49 @@
+system: |
+  You are an AI assistant specialized in analyzing the relevance of entities to questions. Your task is to evaluate which entities are most relevant to answering a given question about a specific relation.
+  
+  For each question:
+  1. Identify which entities from the provided list directly contribute to answering the question
+  2. Assign each entity a relevance score from 0 to 1, ensuring the sum equals 1
+  3. Format your response as a valid JSON object with entities as keys and scores as values
+  
+  Be precise in your evaluation - only select entities that directly help answer the question and distribute scores proportionally to their relevance.
+
+user: |
+  Please score the entities' contribution to the question on a scale from 0 to 1 (the sum of the scores of all entities is 1). Return the result in valid JSON format.
+  
+  In-Context Few-shot
+  
+  Example 1:
+  Q: When was Apple Inc. founded?
+  Relation: founded in
+  Entities: 1976; Cupertino; Steve Jobs; iPhone; Tim Cook
+  A: {"1976": 1.0}
+  
+  Example 2:
+  Q: Who is the current CEO of Microsoft?
+  Relation: has CEO
+  Entities: Bill Gates; Satya Nadella; Steve Ballmer; Windows; Seattle
+  A: {"Satya Nadella": 1.0}
+  
+  Example 3:
+  Q: What products does Samsung make?
+  Relation: produces product
+  Entities: Galaxy phones; TVs; refrigerators; South Korea; Lee Jae-yong
+  A: {"Galaxy phones": 0.4, "TVs": 0.3, "refrigerators": 0.3}
+  
+  Example 4:
+  Q: What companies compete with Google?
+  Relation: competes with
+  Entities: Microsoft; Apple; Facebook; Sundar Pichai; Mountain View
+  A: {"Microsoft": 0.4, "Apple": 0.3, "Facebook": 0.3}
+  
+  Example 5:
+  Q: Who founded Amazon and when?
+  Relation: founded by
+  Entities: Jeff Bezos; 1994; Seattle; AWS; e-commerce
+  A: {"Jeff Bezos": 1.0}
+  
+  Q: {Query}
+  Relation: {Current Relation}
+  Entities: {list of entities}
+  A:

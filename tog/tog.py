@@ -1,258 +1,281 @@
-import os
-from .kg.visualization import visualize_graph
-from typing import Dict, List, Any, Tuple
-import numpy as np
-from .logging_config import logger
-from .llm import AzureOpenAILLM
-from .kg import NetworkxKG
+from typing import List, Optional
 
-class ThinkOnGraph:
-    def __init__(self, llm=AzureOpenAILLM, kg=NetworkxKG, beam_width=3, max_depth=3, top_n_entities=5):
+from tog.llms import BaseLLM
+from tog.kgs import KnowledgeGraph
+from tog.models.entity import Entity
+from tog.models.path import Path
+from tog.pipeline.entity_explorer import Neo4jEntityExplorer
+from tog.pipeline.relation_explorer import Neo4jRelationExplorer
+from tog.pipeline.exploration_loop import ExplorationLoop
+from tog.pipeline.entity_extractor import LLMExtractor, GroqEntityExtractor, AzureOpenAIEntityExtractor
+from tog.pipeline.entity_mapper import EntityMapper
+from tog.pipeline.mapping_handler import Neo4jMappingHandler
+from tog.utils.logger import setup_default_logging
+from tog.config import (
+    DEFAULT_MODEL,
+    DEFAULT_MAX_ITERATIONS,
+    DEFAULT_MAX_PATHS,
+    DEFAULT_MAX_ENTITIES_PER_ROUND,
+    DEFAULT_MAX_RELATIONS
+)
+
+setup_default_logging()
+
+class ToG:
+    """
+    Main class for integrating and using the knowledge graph exploration components.
+    """
+    
+    def __init__(self, 
+                llm: BaseLLM, 
+                kg: KnowledgeGraph,
+                entity_extractor: Optional[LLMExtractor] = None,
+                entity_mapper: Optional[EntityMapper] = None):
         """
-        Initializes the ToG framework.
-        :param llm: Instance of LLM manager.
-        :param kg: Instance of KG manager.
-        :param beam_width: Number of paths to retain at each iteration.
-        :param max_depth: Maximum search depth.
-        :param top_n_entities: Number of top-N topic entities to consider (N).
+        Initialize the knowledge graph explorer.
+        
+        Args:
+            llm: Language model for exploration and answer generation
+            kg: Knowledge graph to explore
+            entity_extractor: Optional entity extractor (will be created if not provided)
+            entity_mapper: Optional entity mapper (will be created if not provided)
         """
         self.llm = llm
         self.kg = kg
-        self.beam_width = beam_width
-        self.max_depth = max_depth
-        self.top_n_entities = top_n_entities
-        self.paths = []
-        self.visited_entities = set()
-        logger.info("ToG framework initialized.")
-
-    def _find_similar_entities(self, query: str, threshold: float = 0.7) -> List[Tuple[str, float]]:
-        """
-        Finds similar entities in the graph using vector similarity.
-        """
-        query_embedding = self.kg.model.encode(query, convert_to_tensor=False)
-        similar_entities = []
-
-        for node_id, data in self.kg.graph.nodes(data=True):
-            if "embeddings" in data:
-                max_similarity = 0
-                for field_embedding in data["embeddings"].values():
-                    similarity = np.dot(query_embedding, field_embedding) / (
-                        np.linalg.norm(query_embedding) * np.linalg.norm(field_embedding)
-                    )
-                    max_similarity = max(max_similarity, similarity)
-                
-                if max_similarity >= threshold:
-                    similar_entities.append((node_id, float(max_similarity)))
-
-        return sorted(similar_entities, key=lambda x: x[1], reverse=True)
-
-    def retrieve_initial_triples(self, entities: List[str]) -> List[Dict[str, Any]]:
-        """
-        Retrieves initial triples for the given entities using similarity search.
-        """
-        triples = []
-        logger.info(f"Retrieving initial triples for entities: {entities}")
         
-        for entity_query in entities:
-            similar_entities = self._find_similar_entities(entity_query)
+        # Set up entity extractor
+        self.entity_extractor = entity_extractor or self._create_default_entity_extractor()
+        
+        # Set up entity mapper
+        self.entity_mapper = entity_mapper or self._create_default_entity_mapper()
+    
+    def _create_default_entity_extractor(self) -> LLMExtractor:
+        """
+        Create a default entity extractor using the same LLM.
+        """
+        # Determine the type of LLM and create the corresponding extractor
+        if hasattr(self.llm, 'model_name'):
+            model_name = self.llm.model_name
             
-            for entity_id, similarity_score in similar_entities:
-                source_name = self.kg.graph.nodes[entity_id]['name']
-                
-                for _, target, key in self.kg.graph.out_edges(entity_id, keys=True):
-                    edge_data = self.kg.graph.get_edge_data(entity_id, target, key)
-                    target_name = self.kg.graph.nodes[target]['name']
-                    
-                    triple = {
-                        "subject": source_name,
-                        "predicate": edge_data["type"],
-                        "object": target_name,
-                        "metadata": edge_data.get("metadata", {}),
-                        "similarity_score": similarity_score,
-                        "_subject_id": entity_id,
-                        "_object_id": target
-                    }
-                    triples.append(triple)
+            # This is a simple detection approach - might need refinement based on your LLM classes
+            if 'gpt' in model_name.lower():
+                return AzureOpenAIEntityExtractor(model_name=model_name)
+            elif 'llama' in model_name.lower():
+                return GroqEntityExtractor(model_name=model_name)
         
-        return triples
-
-    def retrieve_relations(self, entity: str) -> List[Dict[str, Any]]:
+        # Default to using the same LLM type with a basic wrapper
+        return AzureOpenAIEntityExtractor(model_name=DEFAULT_MODEL)
+    
+    def _create_default_entity_mapper(self) -> EntityMapper:
         """
-        Retrieves relationships for the given entity.
+        Create a default entity mapper using the knowledge graph.
         """
-        relations = []
-        for _, target, key, data in self.kg.graph.out_edges(entity, keys=True, data=True):
-            relation = {
-                "id": data["id"],
-                "type": data["type"],
-                "target_id": target,
-                "target_name": self.kg.graph.nodes[target]["name"],
-                "metadata": data.get("metadata", {})
-            }
-            relations.append(relation)
-        return relations
-
-    def initialize_search(self, query):
+        mapping_handler = Neo4jMappingHandler(kg=self.kg)
+        return EntityMapper(kg=self.kg, mapping_handler=mapping_handler)
+        
+    def explore_and_answer(self, 
+                          query: str, 
+                          initial_entities: Optional[List[Entity]] = None,
+                          max_iterations: int = DEFAULT_MAX_ITERATIONS,
+                          max_paths: int = DEFAULT_MAX_PATHS) -> dict:
         """
-        Extracts initial top-N entities and retrieves corresponding triples from the KG.
+        Explore the knowledge graph and generate an answer for the query.
+        
+        Args:
+            query: The query to explore and answer
+            initial_entities: Optional list of initial entities to start exploration from
+            max_iterations: Maximum number of exploration iterations
+            max_paths: Maximum number of paths to maintain
+            
+        Returns:
+            A dictionary containing the answer and the explored paths
         """
-        logger.info(f"Initializing search for query: {query}")
-        # Get initial topic entities (E0)
-        initial_entities = self.llm.extract_initial_entities(query, self.top_n_entities)
+        
+        # Step 1: Extract entities from query if not provided
         if not initial_entities:
-            logger.warning("No initial entities extracted.")
-            raise ValueError("No initial entities extracted.")
+            # Extract entity names using the entity extractor
+            extracted_entity_names = self.entity_extractor.extract_entities(query)
+            
+            if not extracted_entity_names:
+                return {
+                    "success": False,
+                    "answer": "I couldn't identify any entities to explore in your query.",
+                    "paths": []
+                }
+            
+            # Map extracted entities to knowledge graph entities
+            initial_entities = self.entity_mapper.map_entities(extracted_entity_names)
         
-        logger.info(f"Extracted top-{len(initial_entities)} initial entities: {initial_entities}")
+        if not initial_entities:
+            return {
+                "success": False,
+                "answer": "I couldn't find any entities in your query that match our knowledge graph.",
+                "paths": []
+            }
+        print(initial_entities)
+        # Step 2: Initialize explorers
+        entity_explorer = Neo4jEntityExplorer(
+            llm=self.llm,
+            kg=self.kg,
+            query=query,
+            max_entities_per_round=DEFAULT_MAX_ENTITIES_PER_ROUND
+        )
         
-        # Initialize reasoning paths P with triples from initial entities
-        self.paths = self.retrieve_initial_triples(initial_entities)
-        if not self.paths:
-            logger.warning("No initial triples found.")
-            return []
+        relation_explorer = Neo4jRelationExplorer(
+            llm=self.llm,
+            kg=self.kg,
+            query=query,
+            max_relations=DEFAULT_MAX_RELATIONS
+        )
         
-        # Add initial entities to visited set
-        for path in self.paths:
-            if '_subject_id' in path:
-                self.visited_entities.add(path['_subject_id'])
-            if '_object_id' in path:
-                self.visited_entities.add(path['_object_id'])
-                
-        # Keep only top beam_width paths based on similarity scores
-        self.paths = sorted(self.paths, key=lambda x: x['similarity_score'], reverse=True)[:self.beam_width]
+        # Step 3: Initialize exploration loop
+        exploration_loop = ExplorationLoop(
+            llm=self.llm,
+            kg=self.kg,
+            entity_explorer=entity_explorer,
+            relation_explorer=relation_explorer,
+            query=query,
+            max_iterations=max_iterations,
+            max_paths=max_paths
+        )
         
-        logger.debug(f"Initial paths: {self.paths}")
-        return self.paths
-
-    def explore_and_prune(self, paths):
-        """Expands and prunes paths by exploring neighboring entities and relations."""
-        logger.info(f"Exploring and pruning paths: {paths}")
-        all_expanded_paths = []
+        # Step 4: Execute exploration
+        best_paths = exploration_loop.explore(initial_entities)
         
-        # Convert single triple to list if necessary
-        current_paths = paths if isinstance(paths, list) else [paths]
+        if not best_paths:
+            return {
+                "success": False,
+                "answer": "I couldn't find relevant information to answer your query.",
+                "paths": []
+            }
         
-        for path in current_paths:
-            # Get the last triple's object ID
-            entity_id = path['_object_id']
-            relations = self.retrieve_relations(entity_id)
-            
-            if not relations:
-                logger.debug(f"No relations found for entity {path['object']}")
-                continue
-                
-            logger.debug(f"Relations for entity {path['object']}: {relations}")
-            
-            # Create path context for pruning
-            path_context = current_paths if isinstance(paths, list) else path
-            pruned_relations = self.llm.prune_relations(relations, path_context)
-            
-            if not pruned_relations:
-                logger.debug(f"No pruned relations for entity {path['object']}")
-                continue
-                
-            logger.debug(f"Pruned relations for entity {path['object']}: {pruned_relations}")
-            
-            for relation in pruned_relations:
-                target_id = relation["target_id"]
-                if target_id not in self.visited_entities:
-                    # Create new path by extending the current path
-                    new_path = current_paths.copy() if isinstance(paths, list) else []
-                    new_triple = {
-                        "subject": path["object"],
-                        "predicate": relation["type"],
-                        "object": relation["target_name"],
-                        "metadata": relation.get("metadata", {}),
-                        "_subject_id": entity_id,
-                        "_object_id": target_id
-                    }
-                    
-                    if isinstance(paths, list):
-                        new_path.append(new_triple)
-                    else:
-                        new_path = [path, new_triple]
-                        
-                    all_expanded_paths.append(new_path)
-                    logger.debug(f"Expanded path: {all_expanded_paths[-1]}")
-                    self.visited_entities.add(target_id)
+        # Step 5: Generate answer from explored paths
+        answer = self._generate_answer(query, best_paths)
         
-        # Sort expanded paths by relevance if any exist
-        if all_expanded_paths:
-            return all_expanded_paths[:self.beam_width]
-        return []
-
-    def evaluate_paths(self, query, paths):
-        """Determines if the current paths are sufficient to generate an answer."""
-        if not paths:
-            logger.warning("No paths to evaluate.")
-            return False
-        return self.llm.evaluate_paths(query, paths)
-
-    def generate_answer(self, query, paths):
-        """Generates an answer using the current reasoning paths."""
-        return self.llm.generate_answer(query, paths)
-
-    def run(self, query):
-        """Runs the complete Think-on-Graph reasoning process."""
-        logger.info(f"Running ToG process for query: {query}")
-        
-        try:
-            self.paths = self.initialize_search(query)
-        except ValueError as e:
-            logger.error(f"Error initializing search: {e}")
-            return str(e)
-            
-        if not self.paths:
-            logger.warning("No initial paths found.")
-            return "Unable to find relevant information to answer the query."
-            
-        current_paths = self.paths
-        depth = 0
-        
-        while depth < self.max_depth:
-            logger.debug(f"Current depth: {depth}, paths: {current_paths}")
-            
-            # Check if current paths are sufficient
-            if self.evaluate_paths(query, current_paths):
-                answer = self.generate_answer(query, current_paths)
-                logger.info(f"Generated answer: {answer}")
-                return answer
-            
-            # Explore and prune paths
-            expanded_paths = self.explore_and_prune(current_paths)
-            
-            if not expanded_paths:
-                # If we have current paths but no expansions, try generating an answer
-                if current_paths:
-                    logger.info("No more paths to explore, generating answer from current paths")
-                    return self.generate_answer(query, current_paths)
-                logger.warning("No paths found after pruning.")
-                break
-                
-            current_paths = expanded_paths
-            depth += 1
-            
-        # If we reached max depth, try to generate answer from final paths
-        if current_paths:
-            logger.info("Reached maximum depth, generating answer from final paths")
-            return self.generate_answer(query, current_paths)
-            
-        logger.warning("Unable to derive an answer.")
-        return "Unable to find sufficient information to answer the query."
+        return {
+            "success": True,
+            "answer": answer,
+            "paths": [self._format_path(path) for path in best_paths]
+        }
     
+    def _generate_answer(self, query: str, paths: List[Path]) -> str:
+        """
+        Generate an answer to the query based on the explored paths.
+        
+        Args:
+            query: The original query
+            paths: The list of explored paths
+            
+        Returns:
+            An answer string
+        """
+        # Format paths for the LLM
+        paths_text = ""
+        for i, path in enumerate(paths, 1):
+            path_str = " → ".join([
+                f"{triple.subject.name}" + 
+                (f" -{triple.predicate.type}→ {triple.object.name}" if triple.predicate and triple.object else "")
+                for triple in path.path
+            ])
+            paths_text += f"{i}. {path_str} (Confidence: {path.confidence_score:.2f})\n"
+        
+        # Generate answer using LLM
+        prompt = f"""
+        Based on the following knowledge graph paths, please provide a comprehensive answer to the query.
+        
+        QUERY: {query}
+        
+        KNOWLEDGE PATHS:
+        {paths_text}
+        
+        Your answer should synthesize the information from these paths to provide a clear explanation.
+        """
+        
+        messages = [
+            {"role": "system", "content": "You are a helpful assistant that provides informative answers based on knowledge graph data."},
+            {"role": "user", "content": prompt}
+        ]
+        
+        answer = self.llm.generate(messages, temperature=0.7)
+        return answer
     
-if __name__ == '__main__':
+    def _format_path(self, path: Path) -> dict:
+        """
+        Format a path for API response.
+        
+        Args:
+            path: The path to format
+            
+        Returns:
+            A dictionary representation of the path
+        """
+        return {
+            "triples": [
+                {
+                    "subject": {
+                        "id": triple.subject.id,
+                        "name": triple.subject.name,
+                        "type": triple.subject.type
+                    },
+                    "predicate": {
+                        "id": triple.predicate.id,
+                        "type": triple.predicate.type
+                    } if triple.predicate else None,
+                    "object": {
+                        "id": triple.object.id,
+                        "name": triple.object.name,
+                        "type": triple.object.type
+                    } if triple.object else None
+                }
+                for triple in path.path
+            ],
+            "confidence_score": path.confidence_score
+        }
 
-    from tog.llm import AzureOpenAILLM
-    from tog.kg import NetworkxKG
 
-    llm = AzureOpenAILLM(model_name='gpt-4o')
-
-    kg = NetworkxKG(
-        graph_endpoint='knowledge_graph.json',
+# Example usage
+def main():
+    # This is a demonstration - you'd need to implement or import the actual LLM and KG classes
+    from tog.llms.azure_openai_llm import AzureOpenAILLM
+    from tog.kgs.neo4j_kg import Neo4jKnowledgeGraph
+    
+    # Initialize components
+    llm = AzureOpenAILLM(model_name="gpt-4o")
+    kg = Neo4jKnowledgeGraph()
+    
+    # Initialize entity extractor and mapper
+    entity_extractor = AzureOpenAIEntityExtractor(model_name="gpt-4o")
+    mapping_handler = Neo4jMappingHandler(kg=kg)
+    entity_mapper = EntityMapper(kg=kg, mapping_handler=mapping_handler)
+    
+    # Create explorer with the components
+    explorer = ToG(
+        llm=llm, 
+        kg=kg,
+        entity_extractor=entity_extractor,
+        entity_mapper=entity_mapper
     )
-    visualize_graph(kg.graph)
+    
+    # Example query
+    # query = "What are the key compliance and data protection responsibilities of the CONSULTANT under the agreement?"
+    query="what is omnigon?"
 
-    tog = ThinkOnGraph(llm=llm, kg=kg, beam_width=3, max_depth=5)
-    response = tog.run("Name a researcher involved in the study of Cannabidiol's therapeutic effects") 
-    print(response)
+    # Run exploration and get answer
+    result = explorer.explore_and_answer(query)
+    
+    # Print result
+    print(f"Query: {query}")
+    print("\nAnswer:")
+    print(result["answer"])
+    print("\nExplored Paths:")
+    for i, path in enumerate(result["paths"], 1):
+        path_str = " → ".join([
+            f"{triple['subject']['name']}" + 
+            (f" -{triple['predicate']['type']}→ {triple['object']['name']}" if triple['predicate'] and triple['object'] else "")
+            for triple in path["triples"]
+        ])
+        print(f"{i}. {path_str} (Confidence: {path['confidence_score']:.2f})")
+
+
+if __name__ == "__main__":
+    main()
