@@ -123,63 +123,287 @@ ToG achieves **state-of-the-art results** on complex reasoning tasks:
 
 ### **Quick Installation**
 ```bash
-git clone https://github.com/yourusername/think-on-graph-agent.git
-cd think-on-graph-agent
-pip install -r requirements.txt
+pip install tog-reasoning
 ```
 
-## Usage
+### **Basic Usage**
+
 ```python
-from think_on_graph import GraphAgent
+from tog import ToG
+from tog.llms.azure_openai_llm import AzureOpenAILLM
+from tog.kgs.neo4j_kg import Neo4jKnowledgeGraph
 
-# Initialize the agent
-agent = GraphAgent()
+# Set up your Azure OpenAI and knowledge graph
+llm = AzureOpenAILLM(model_name="gpt-4o")
+kg = Neo4jKnowledgeGraph()
 
-# Load your knowledge graph
-agent.load_graph("path/to/graph")
+# Create the ToG explorer
+explorer = ToG(llm=llm, kg=kg)
 
-# Run reasoning
-result = agent.reason(query="Your question here")
+# Ask questions and get traced answers
+query = "What is omnigon?"
+result = explorer.explore_and_answer(query)
+
+# Get your answer with reasoning
+print("Answer:", result["answer"])
+print("Success:", result["success"])
+print("Reasoning Paths:")
+for i, path in enumerate(result["paths"], 1):
+    print(f"Path {i} (Confidence: {path['confidence_score']:.2f})")
+    for triple in path["triples"]:
+        subject = triple["subject"]["name"]
+        if triple["predicate"] and triple["object"]:
+            predicate = triple["predicate"]["type"]
+            object_name = triple["object"]["name"]
+            print(f"  {subject} --{predicate}--> {object_name}")
 ```
 
-## Architecture
-The system consists of three main components:
-1. Graph Processing Module
-2. LLM Integration Layer
-3. Reasoning Engine
+### **Complete Example with Custom Components**
 
-## References
-- [Think-on-Graph: Deep and Responsible Reasoning of Large Language Model on Knowledge Graph](https://arxiv.org/pdf/2307.07697)
+```python
+from tog import ToG
+from tog.llms.azure_openai_llm import AzureOpenAILLM
+from tog.kgs.neo4j_kg import Neo4jKnowledgeGraph
+from tog.pipeline.entity_extractor import AzureOpenAIEntityExtractor
+from tog.pipeline.entity_mapper import EntityMapper
+from tog.pipeline.mapping_handler import Neo4jMappingHandler
 
-## Contributing
-Contributions are welcome! Please feel free to submit a Pull Request.
+# Initialize components
+llm = AzureOpenAILLM(model_name="gpt-4o")
+kg = Neo4jKnowledgeGraph()
 
-## License
-This project is licensed under the MIT License - see the LICENSE file for details.
+# Initialize entity extractor and mapper
+entity_extractor = AzureOpenAIEntityExtractor(model_name="gpt-4o")
+mapping_handler = Neo4jMappingHandler(kg=kg)
+entity_mapper = EntityMapper(kg=kg, mapping_handler=mapping_handler)
+
+# Create explorer with custom components
+explorer = ToG(
+    llm=llm, 
+    kg=kg,
+    entity_extractor=entity_extractor,
+    entity_mapper=entity_mapper
+)
+
+# Ask complex questions
+query = "What are the key compliance and data protection responsibilities of the CONSULTANT under the agreement?"
+result = explorer.explore_and_answer(
+    query,
+    max_iterations=5,  # How many exploration rounds
+    max_paths=10       # How many paths to maintain
+)
+
+# Process results
+if result["success"]:
+    print("Answer:", result["answer"])
+    print(f"Found {len(result['paths'])} reasoning paths")
+else:
+    print("Could not find answer:", result["answer"])
+```
 
 ---
 
-## 🙏 **Citation**
+## 🎛️ **Configuration Options**
 
-If you use Think-on-Graph in your research, please cite:
+### **Entity Extraction Models**
 
-```bibtex
-@inproceedings{tog2024,
-  title={Think-on-Graph: Deep and Responsible Reasoning of Large Language Model on Knowledge Graph},
-  author={Your Authors},
-  booktitle={International Conference on Learning Representations},
-  year={2024}
+```python
+# Azure OpenAI
+from tog.pipeline.entity_extractor import AzureOpenAIEntityExtractor
+entity_extractor = AzureOpenAIEntityExtractor(model_name="gpt-4o")
+
+# Groq (faster, cheaper)
+from tog.pipeline.entity_extractor import GroqEntityExtractor
+entity_extractor = GroqEntityExtractor(model_name="llama-3.1-8b")
+```
+
+### **Exploration Parameters**
+
+```python
+result = explorer.explore_and_answer(
+    query="Your question here",
+    max_iterations=3,      # Exploration depth (1-10)
+    max_paths=5,           # Paths to maintain (1-20)
+    initial_entities=None  # Optional: start with specific entities
+)
+```
+
+### **Advanced Configuration**
+
+```python
+# Configure exploration parameters via config
+from tog.config import (
+    DEFAULT_MAX_ITERATIONS,
+    DEFAULT_MAX_PATHS,
+    DEFAULT_MAX_ENTITIES_PER_ROUND,
+    DEFAULT_MAX_RELATIONS
+)
+
+# You can modify these defaults or pass them explicitly
+explorer = ToG(llm=llm, kg=kg)
+result = explorer.explore_and_answer(
+    query,
+    max_iterations=DEFAULT_MAX_ITERATIONS,  # Default: 3
+    max_paths=DEFAULT_MAX_PATHS             # Default: 5
+)
+```
+
+---
+
+## 🔧 **Project Structure**
+
+```
+tog/
+├── __init__.py         # Main ToG class
+├── pipeline/           # Core reasoning components
+│   ├── entity_extractor.py    # Extract entities from queries
+│   ├── entity_mapper.py       # Map entities to knowledge graph
+│   ├── entity_explorer.py     # Explore entities in graph
+│   ├── relation_explorer.py   # Explore relationships
+│   ├── exploration_loop.py    # Coordinate exploration
+│   └── mapping_handler.py     # Handle entity mappings
+├── llms/              # AI model integrations
+│   ├── azure_openai_llm.py   # Azure OpenAI integration
+│   └── base_llm.py            # Base LLM interface
+├── kgs/               # Knowledge graph databases
+│   └── neo4j_kg.py           # Neo4j integration
+├── models/            # Data structures
+│   ├── entity.py             # Entity model
+│   └── path.py               # Path model
+├── utils/             # Utilities
+│   └── logger.py             # Logging setup
+└── config.py          # Configuration constants
+```
+
+---
+
+## 📈 **Understanding the Results**
+
+### **Result Structure**
+
+```python
+result = {
+    "success": True,           # Whether exploration succeeded
+    "answer": "Generated answer based on paths",
+    "paths": [                 # List of reasoning paths found
+        {
+            "triples": [       # Knowledge graph triples in path
+                {
+                    "subject": {"id": "...", "name": "...", "type": "..."},
+                    "predicate": {"id": "...", "type": "..."},
+                    "object": {"id": "...", "name": "...", "type": "..."}
+                }
+            ],
+            "confidence_score": 0.85  # How confident the path is
+        }
+    ]
 }
 ```
+
+### **Path Interpretation**
+
+Each path represents a reasoning chain:
+- **Triples**: Subject → Predicate → Object relationships
+- **Confidence Score**: Higher = more relevant to your query
+- **Multiple Paths**: Different ways to answer the same question
+
+---
+
+## 🛠️ **Integration Examples**
+
+### **With Flask API**
+
+```python
+from flask import Flask, request, jsonify
+from tog import ToG
+
+app = Flask(__name__)
+explorer = ToG(llm=your_llm, kg=your_kg)
+
+@app.route('/ask', methods=['POST'])
+def ask_question():
+    query = request.json.get('query')
+    result = explorer.explore_and_answer(query)
+    return jsonify(result)
+```
+
+### **With FastAPI**
+
+```python
+from fastapi import FastAPI
+from tog import ToG
+
+app = FastAPI()
+explorer = ToG(llm=your_llm, kg=your_kg)
+
+@app.post("/ask")
+async def ask_question(query: str):
+    result = explorer.explore_and_answer(query)
+    return result
+```
+
+---
+
+## 🔍 **Troubleshooting**
+
+### **Common Issues**
+
+**No entities found in query**
+```python
+# Solution: Check entity extraction
+extractor = AzureOpenAIEntityExtractor(model_name="gpt-4o")
+entities = extractor.extract_entities("Your query here")
+print("Extracted entities:", entities)
+```
+
+**Entities not mapping to knowledge graph**
+```python
+# Solution: Check entity mapping
+mapper = EntityMapper(kg=kg, mapping_handler=mapping_handler)
+mapped_entities = mapper.map_entities(["entity1", "entity2"])
+print("Mapped entities:", mapped_entities)
+```
+
+**No reasoning paths found**
+```python
+# Solution: Try broader exploration
+result = explorer.explore_and_answer(
+    query,
+    max_iterations=5,    # Increase exploration depth
+    max_paths=10         # Keep more paths
+)
+```
+
+---
+## 📚 **Learn More**
+
+### **Documentation** *(Coming Soon)*
+- 📖 Complete API Guide
+- 🎯 Step-by-Step Tutorials
+- 🔧 Configuration Options
+- 📊 Performance Details
+
+### **Community** *(Coming Soon)*
+- 💬 Discussion Forum
+- 🐛 Report Issues
+- 💡 Feature Ideas
+
+---
+
+## 📄 **License & Citation**
+
+This project will be open-sourced under the MIT License in an upcoming release.
 
 ---
 
 <div align="center">
 
-**🚀 Ready to revolutionize AI reasoning?**
+### 🚀 Ready to make AI reasoning reliable and traceable?
 
-[Get Started](docs/quickstart.md) • [View Examples](examples/) • [Join Community](https://discord.gg/tog-reasoning)
+📅 **Coming Soon:** Powerful new capabilities to enhance reasoning, traceability, and seamless integration are under development. Stay tuned!
 
-*Built with ❤️ by the ToG Research Team*
+🛠️ **Note:** Current content is under construction. Some features will be released in future updates.
+
+*Think-on-Graph: Where AI meets reliable reasoning.*
 
 </div>
