@@ -1,6 +1,6 @@
 import yaml
 from pathlib import Path
-from typing import Dict, Any, Optional, Union, List
+from typing import Dict, Any, Optional, Union
 
 class YamlHandler:
     """

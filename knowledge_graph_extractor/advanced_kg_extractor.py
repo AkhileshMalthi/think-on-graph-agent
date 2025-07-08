@@ -1,9 +1,7 @@
 import json
-import re
 import logging
 import os
 from typing import Dict, List, Any, Optional, Union
-from collections import defaultdict
 from dataclasses import dataclass, asdict, field
 from fuzzywuzzy import fuzz
 import hashlib
@@ -18,7 +16,6 @@ from langchain_openai import AzureChatOpenAI
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-from dotenv import load_dotenv
 load_dotenv()
 @dataclass
 class Entity:

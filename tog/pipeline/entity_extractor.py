@@ -5,8 +5,6 @@ from typing import List
 from tog.llms.base_llm import BaseLLM
 from tog.llms.groq_llm import GroqLLM
 from tog.llms.azure_openai_llm import AzureOpenAILLM
-from tog.models.entity import Entity
-import json
 
 from tog.utils import PromptLoader
 from tog.models.response import ExtractionResponse

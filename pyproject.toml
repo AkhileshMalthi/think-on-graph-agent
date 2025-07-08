@@ -17,6 +17,7 @@ python-dotenv = "^1.0.1"
 fuzzywuzzy = "^0.18.0"
 langchain-experimental = "^0.3.4"
 langchain-openai = "^0.3.27"
+docling = "^2.40.0"
 
 
 [tool.poetry.group.dev.dependencies]

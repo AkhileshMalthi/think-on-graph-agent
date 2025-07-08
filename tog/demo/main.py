@@ -4,13 +4,11 @@ Entry point for the Knowledge Graph Explorer web application
 """
 
 import streamlit as st
-import time
-from datetime import datetime
 
 from tog.config import create_sidebar_config
 from ui_components import render_header, setup_page, display_exploration_results, display_logs_section, display_history_section
 from session_manager import initialize_session_state, setup_logging
-from explorer_engine import initialize_explorer, run_exploration_with_progress
+from explorer_engine import run_exploration_with_progress
 
 
 def main():

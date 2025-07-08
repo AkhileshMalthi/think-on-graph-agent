@@ -70,7 +70,7 @@ class AzureOpenAIExtractor:
 
             return graph_data
 
-        except Exception as e:
+        except Exception:
             print("CRITICAL ERROR during extraction:")
             print(traceback.format_exc())
             return {"entities": [], "relationships": []}

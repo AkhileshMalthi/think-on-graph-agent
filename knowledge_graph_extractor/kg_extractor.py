@@ -1,12 +1,9 @@
 import json
-import re
 import logging
 import os
 from typing import Dict, List, Any, Optional, Union
-from collections import defaultdict
 from dataclasses import dataclass, asdict, field
 from fuzzywuzzy import fuzz
-import networkx as nx
 import spacy
 from openai import AzureOpenAI
 import hashlib

@@ -1,8 +1,7 @@
-import os
 import networkx as nx
 from pyvis.network import Network
 from abc import ABC, abstractmethod
-from typing import Dict, Optional, List, Any, Union
+from typing import Dict, List, Any
 
 class Visualizer(ABC):
     """

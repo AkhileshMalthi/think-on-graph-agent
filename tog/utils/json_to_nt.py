@@ -1,8 +1,6 @@
 import json
-import hashlib
 import re
 import os
-from typing import Dict, List, Any
 
 def clean_text(text: str) -> str:
     """Clean text to make it suitable for URI/literal in N-Triples format."""

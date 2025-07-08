@@ -96,10 +96,10 @@ class RelationExplorer(Explorer, ABC):
             try:
                 return json.loads(json_match.group(0))
             except json.JSONDecodeError:
-                self.logger.error(f"Failed to parse LLM response as JSON")
+                self.logger.error("Failed to parse LLM response as JSON")
                 return {}
         else:
-            self.logger.error(f"No JSON found in LLM response")
+            self.logger.error("No JSON found in LLM response")
             return {}
     
     def _score_relations(self, relations: List[Relation], scores_dict: Dict) -> List[Relation]:
