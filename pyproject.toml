@@ -15,7 +15,10 @@ pyvis = "^0.3.2"
 openai = "^1.55.3"
 python-dotenv = "^1.0.1"
 fuzzywuzzy = "^0.18.0"
-
+langchain-experimental = "^0.3.4"
+langchain-openai = "^0.3.27"
+docling = "^2.40.0"
+python-slugify = "^8.0.1"  # or latest
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.4"
