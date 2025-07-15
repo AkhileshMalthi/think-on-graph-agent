@@ -4,7 +4,7 @@
 
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Research Paper](https://img.shields.io/badge/Paper-ICLR%202024-red.svg)](https://github.com/IDEA)
+[![Research Paper](https://img.shields.io/badge/Paper-ICLR%202024-red.svg)](https://arxiv.org/pdf/2307.07697)
 
 ---
 
